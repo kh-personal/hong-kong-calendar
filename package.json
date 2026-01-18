@@ -1,5 +1,6 @@
 {
   "name": "hong-kong-calendar",
+  "homepage": "https://kh-personal.github.io/hong-kong-calendar/", 
   "private": true,
   "version": "0.0.0",
   "type": "module",

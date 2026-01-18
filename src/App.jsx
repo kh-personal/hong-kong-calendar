@@ -130,6 +130,10 @@ export default function App() {
   const [customApiKey, setCustomApiKey] = useState("");
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showPrintHelp, setShowPrintHelp] = useState(false);
+  const [showBatchPrintModal, setShowBatchPrintModal] = useState(false);
+  const [batchPrintStart, setBatchPrintStart] = useState('2026-01');
+  const [batchPrintEnd, setBatchPrintEnd] = useState('2026-12');
+  const [isBatchPrinting, setIsBatchPrinting] = useState(false);
   
   const { getLunarData, lunarLoaded } = useLunar();
   const fileInputRef = useRef(null);
@@ -152,13 +156,36 @@ export default function App() {
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handlePrint = () => setShowPrintHelp(true);
+  
+  const handleBatchPrint = () => {
+    setIsBatchPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsBatchPrinting(false);
+    }, 100);
+  };
+  
+  const generateBatchCalendars = () => {
+    const [startYear, startMonth] = batchPrintStart.split('-').map(Number);
+    const [endYear, endMonth] = batchPrintEnd.split('-').map(Number);
+    const calendars = [];
+    
+    for (let y = startYear; y <= endYear; y++) {
+      const startM = y === startYear ? startMonth - 1 : 0;
+      const endM = y === endYear ? endMonth - 1 : 11;
+      for (let m = startM; m <= endM; m++) {
+        calendars.push({ year: y, month: m, date: new Date(y, m, 1) });
+      }
+    }
+    return calendars;
+  };
 
   const currentKey = `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
   const currentImage = userImages[currentKey] || DEFAULT_THEMES[currentDate.getMonth()];
   const isUserImage = !!userImages[currentKey];
   
   const transform = imageTransforms[currentKey] || { scale: 1, x: 0, y: 0, fit: 'contain' };
-  const textConfig = textOverlays[currentKey] || { text: '', x: 20, y: 20, size: 24, font: 'sans', color: '#ffffff', shadow: true };
+  const textConfig = textOverlays[currentKey] || { text: '', x: 20, y: 20, size: 24, font: 'sans', color: '#ffffff', shadow: true, align: 'center' };
 
   const updateTransform = (newVals) => {
     setImageTransforms(prev => ({ ...prev, [currentKey]: { ...transform, ...newVals } }));
@@ -316,9 +343,11 @@ export default function App() {
   const lunarYearInfo = getLunarData(new Date(year, month, 15))?.yearZH || '';
 
   const containerClass = layoutMode === 'side-by-side' ? 'flex-row' : 'flex-col';
-  const imageWidthClass = layoutMode === 'side-by-side' ? 'w-[40%] border-r' : 'w-full h-[40%] border-b';
-  const calendarWidthClass = layoutMode === 'side-by-side' ? 'w-[60%]' : 'w-full h-[60%]';
+  const imageWidthClass = layoutMode === 'side-by-side' ? 'border-r' : 'w-full h-[40%] border-b';
+  const calendarWidthClass = layoutMode === 'side-by-side' ? '' : 'w-full h-[60%]';
   const calendarPadding = layoutMode === 'side-by-side' ? 'p-4' : 'p-3';
+  const imageStyle = layoutMode === 'side-by-side' ? { flex: '0 0 40%' } : {};
+  const calendarStyle = layoutMode === 'side-by-side' ? { flex: '0 0 60%' } : {};
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 pb-12">
@@ -344,6 +373,8 @@ export default function App() {
                 <button onClick={() => setLayoutMode('top-bottom')} className={`p-1.5 rounded ${layoutMode === 'top-bottom' ? 'bg-white shadow text-indigo-600' : 'text-slate-400'}`}><ArrowUpDown size={16} /></button>
              </div>
              <button onClick={() => setShowKeyModal(true)} className={`p-2 rounded-md transition-colors ${customApiKey ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}><Key size={18} /></button>
+             {!isBatchPrinting && <button onClick={() => setShowBatchPrintModal(true)} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm"><Printer size={16} /> 批量列印</button>}
+             {isBatchPrinting && <button onClick={() => setIsBatchPrinting(false)} className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm"><X size={16} /> 關閉批量列印</button>}
              <button onClick={handlePrint} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium shadow-sm"><Printer size={16} /> 列印</button>
           </div>
         </div>
@@ -424,6 +455,15 @@ export default function App() {
                         陰影
                       </label>
                     </div>
+                    
+                    <div className="flex items-center gap-1 bg-slate-50 p-1 rounded">
+                      <AlignLeft size={12} className="text-slate-400"/>
+                      {[{ value: 'left', label: '左' }, { value: 'center', label: '中' }, { value: 'right', label: '右' }].map(opt => (
+                        <button key={opt.value} onClick={() => updateTextConfig({ align: opt.value })} className={`flex-1 px-2 py-1 text-xs rounded ${textConfig.align === opt.value ? 'bg-white shadow text-indigo-600 font-medium' : 'text-slate-500'}`}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -443,7 +483,7 @@ export default function App() {
         <div className={`bg-white shadow-2xl print:shadow-none relative overflow-hidden flex ${containerClass}`} style={{ width: '210mm', height: '148mm', flexShrink: 0 }}>
           
           {/* Image Area */}
-          <div className={`${imageWidthClass} bg-slate-50 relative overflow-hidden group border-slate-100`}>
+          <div className={`${imageWidthClass} bg-slate-50 relative overflow-hidden group border-slate-100`} style={imageStyle}>
             {/* The Image Itself - Wrapper for ref */}
             <div 
               ref={imageContainerRef}
@@ -466,7 +506,7 @@ export default function App() {
             {/* Text Overlay */}
             {isUserImage && textConfig.text && (
               <div 
-                className="absolute cursor-move select-none whitespace-pre-wrap text-center leading-tight z-20"
+                className="absolute cursor-move select-none whitespace-pre-wrap leading-tight z-20"
                 style={{
                   left: textConfig.x,
                   top: textConfig.y,
@@ -475,6 +515,7 @@ export default function App() {
                   color: textConfig.color,
                   textShadow: textConfig.shadow ? '2px 2px 4px rgba(0,0,0,0.8)' : 'none',
                   fontWeight: textConfig.font === 'hand' ? 'normal' : 'bold',
+                  textAlign: textConfig.align || 'center',
                 }}
                 onMouseDown={handleMouseDownText}
               >
@@ -495,7 +536,7 @@ export default function App() {
           </div>
 
           {/* Calendar Area */}
-          <div className={`${calendarWidthClass} ${calendarPadding} flex flex-col justify-between bg-white relative`}>
+          <div className={`${calendarWidthClass} ${calendarPadding} flex flex-col justify-between bg-white relative`} style={calendarStyle}>
             <div className="flex justify-between items-end mb-2 border-b-2 border-indigo-500 pb-2">
               <div className="flex items-baseline gap-3">
                 <h2 className="text-4xl font-bold text-slate-800 leading-none tracking-tight">{month + 1}<span className="text-lg ml-1 text-slate-500 font-medium">月</span></h2>
@@ -556,18 +597,158 @@ export default function App() {
           </div>
         </div>
       )}
+      {showBatchPrintModal && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+             <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">批量列印日期範圍</h3><button onClick={() => setShowBatchPrintModal(false)}><X size={20}/></button></div>
+             <div className="space-y-4">
+               <div>
+                 <label className="block text-sm font-medium mb-1">開始日期 (YYYY-MM)</label>
+                 <input type="month" value={batchPrintStart} onChange={(e) => setBatchPrintStart(e.target.value)} className="w-full border border-slate-200 rounded p-2"/>
+               </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1">結束日期 (YYYY-MM)</label>
+                 <input type="month" value={batchPrintEnd} onChange={(e) => setBatchPrintEnd(e.target.value)} className="w-full border border-slate-200 rounded p-2"/>
+               </div>
+               <p className="text-xs text-slate-500">每頁會列印 2 個月份</p>
+             </div>
+             <div className="flex justify-end gap-2 mt-6"><button onClick={() => setShowBatchPrintModal(false)} className="px-4 py-2 text-sm text-slate-500">取消</button><button onClick={() => { setShowBatchPrintModal(false); setIsBatchPrinting(true); setTimeout(() => window.print(), 500); }} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded">列印</button></div>
+          </div>
+        </div>
+      )}
+
+      {isBatchPrinting && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-white overflow-y-auto overflow-x-hidden print:overflow-hidden">
+            <div className="w-full min-h-screen print:min-h-0">
+              {generateBatchCalendars().map((cal, idx) => {
+              const calKey = `${cal.year}-${cal.month}`;
+              const calImage = userImages[calKey] || DEFAULT_THEMES[cal.month];
+              const isCalUserImage = !!userImages[calKey];
+              const calTransform = imageTransforms[calKey] || { scale: 1, x: 0, y: 0, fit: 'contain' };
+              const calTextConfig = textOverlays[calKey] || { text: '', x: 20, y: 20, size: 24, font: 'sans', color: '#ffffff', shadow: true, align: 'center' };
+              
+              const daysInMonth = new Date(cal.year, cal.month + 1, 0).getDate();
+              const firstDayOfMonth = new Date(cal.year, cal.month, 1).getDay();
+              const calendarDays = [];
+              for (let i = 0; i < firstDayOfMonth; i++) calendarDays.push({ day: null });
+              for (let i = 1; i <= daysInMonth; i++) {
+                const dateStr = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const dateObj = new Date(cal.year, cal.month, i);
+                const holidayName = HK_HOLIDAYS[dateStr];
+                calendarDays.push({ 
+                    day: i, 
+                    dateStr, 
+                    isSunday: dateObj.getDay() === 0, 
+                    isHoliday: !!holidayName,
+                    holidayName: holidayName, 
+                    lunar: getLunarData(dateObj) 
+                });
+              }
+              const lunarYearInfo = getLunarData(new Date(cal.year, cal.month, 15))?.yearZH || '';
+
+              return (
+                <div key={idx} className="batch-calendar-page" style={{ pageBreakAfter: idx % 2 === 1 ? 'always' : 'auto', pageBreakInside: 'avoid', marginBottom: idx % 2 === 0 ? '0' : '0', overflow: 'hidden' }}>
+                  <div className="bg-white relative overflow-hidden flex flex-row" style={{ width: '210mm', height: '148mm', margin: '0 auto', overflow: 'hidden' }}>
+                    {/* Image Area */}
+                    <div className="border-r bg-slate-50 relative border-slate-100" style={{ flex: '0 0 40%', overflow: 'hidden', height: '148mm' }}>
+                      <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
+                        <img 
+                          src={calImage} 
+                          alt="Feature" 
+                          className="origin-center w-full h-full pointer-events-none select-none"
+                          style={{ 
+                            objectFit: isCalUserImage ? calTransform.fit : 'cover', 
+                            transform: `translate(${calTransform.x}px, ${calTransform.y}px) scale(${calTransform.scale})`
+                          }}
+                        />
+                      </div>
+                      
+                      {isCalUserImage && calTextConfig.text && (
+                        <div 
+                          className="absolute select-none whitespace-pre-wrap leading-tight z-20"
+                          style={{
+                            left: calTextConfig.x,
+                            top: calTextConfig.y,
+                            fontSize: `${calTextConfig.size}px`,
+                            fontFamily: FONT_OPTIONS[calTextConfig.font].value,
+                            color: calTextConfig.color,
+                            textShadow: calTextConfig.shadow ? '2px 2px 4px rgba(0,0,0,0.8)' : 'none',
+                            fontWeight: calTextConfig.font === 'hand' ? 'normal' : 'bold',
+                            textAlign: calTextConfig.align || 'center',
+                          }}
+                        >
+                          {calTextConfig.text}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Calendar Area */}
+                    <div className="p-4 flex flex-col justify-between bg-white relative" style={{ flex: '0 0 60%' }}>
+                      <div className="flex justify-between items-end mb-2 border-b-2 border-indigo-500 pb-2">
+                        <div className="flex items-baseline gap-3">
+                          <h2 className="text-4xl font-bold text-slate-800 leading-none tracking-tight">{cal.month + 1}<span className="text-lg ml-1 text-slate-500 font-medium">月</span></h2>
+                          <div className="flex flex-col border-l pl-3 border-slate-300">
+                            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">{new Date(cal.year, cal.month).toLocaleString('en-US', { month: 'long' })}</span>
+                            <span className="text-xs text-slate-400 font-light">{cal.year} {lunarYearInfo}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-7 mb-2">
+                        {WEEKDAYS_EN.map((d, i) => (
+                          <div key={d} className="text-center">
+                            <div className={`text-[10px] uppercase font-bold tracking-wider ${i === 0 || i === 6 ? 'text-red-500' : 'text-slate-400'}`}>{d}</div>
+                            <div className={`text-[9px] font-normal ${i === 0 || i === 6 ? 'text-red-400' : 'text-slate-300'}`}>{WEEKDAYS_ZH[i]}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 flex-grow auto-rows-fr gap-1">
+                        {calendarDays.map((item, itemIdx) => {
+                          if (!item.day) return <div key={itemIdx} className="bg-transparent"></div>;
+                          const isRed = item.isSunday || item.isHoliday;
+                          const fest = item.lunar?.festivals?.[0];
+                          const displayLunar = item.lunar?.jieQi || (fest && fest.length <= 4 ? fest : item.lunar?.dayZH);
+                          const lunarClass = item.lunar?.jieQi ? "text-indigo-600 font-medium" : (fest ? "text-red-600 font-medium" : "text-slate-400");
+                          return (
+                            <div key={itemIdx} className={`relative p-1 border rounded-sm flex flex-col justify-start ${isRed ? 'bg-red-50/30 border-red-50' : 'bg-slate-50/30 border-slate-100'}`}>
+                              <span className={`text-lg font-bold leading-none ${isRed ? 'text-red-600' : 'text-slate-700'} font-sans`}>{item.day}</span>
+                              <div className="flex flex-col mt-auto">
+                                {item.isHoliday && <span className="text-[9px] leading-tight text-red-500 truncate font-medium mb-0.5 block w-full">{item.holidayName}</span>}
+                                <span className={`text-[8px] leading-none transform ${lunarClass} truncate block w-full`}>{displayLunar}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </>
+      )}
 
       <style>{`
         @media print {
-          @page { size: landscape; margin: 0; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          @page { size: portrait; margin: 0; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0 !important; padding: 0 !important; overflow: hidden !important; width: 210mm !important; }
+          html { overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
+          * { overflow: visible !important; }
           nav, button, .print\\:hidden { display: none !important; }
           .min-h-screen, .max-w-full { min-height: 0 !important; height: auto !important; width: 100% !important; padding: 0 !important; margin: 0 !important; display: block !important; overflow: visible !important; }
-          .overflow-hidden { overflow: visible !important; }
-          .bg-white.shadow-2xl { box-shadow: none !important; width: 100% !important; max-width: none !important; aspect-ratio: 210/148; height: auto !important; margin: 0 auto !important; page-break-inside: avoid; border: 1px solid #e2e8f0 !important; border-radius: 0 !important; display: flex !important; }
-          .bg-white.shadow-2xl > div { height: 100% !important; }
+          .bg-white.shadow-2xl { box-shadow: none !important; width: 210mm !important; height: 148mm !important; max-width: none !important; margin: 0 !important; page-break-inside: avoid; border: 1px solid #e2e8f0 !important; border-radius: 0 !important; display: flex !important; overflow: hidden !important; }
+          .bg-white.shadow-2xl > div { height: 100% !important; overflow: hidden !important; position: relative !important; }
+          .batch-calendar-page { page-break-inside: avoid !important; margin: 0 !important; overflow: hidden !important; }
+          .batch-calendar-page > div { overflow: hidden !important; }
+          .batch-calendar-page > div > div { overflow: hidden !important; }
+          .batch-calendar-page:nth-child(odd) { margin-bottom: 0 !important; }
+          .batch-calendar-page:nth-child(even) { page-break-after: always !important; }
           .grid-cols-7 { height: auto !important; flex-grow: 1 !important; display: grid !important; }
           .text-4xl { font-size: 1.8rem !important; } .text-lg { font-size: 1rem !important; } .p-4 { padding: 0.75rem !important; }
+          .fixed { position: relative !important; }
+          .inset-0 { inset: auto !important; }
         }
       `}</style>
     </div>
