@@ -533,7 +533,6 @@ export default function App() {
                 );
               })}
             </div>
-             <div className="absolute bottom-1 right-2 text-[6px] text-slate-300">HK Holiday Calendar 2024-2026</div>
           </div>
         </div>
       </div>
