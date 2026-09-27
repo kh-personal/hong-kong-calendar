@@ -29,6 +29,12 @@ const HK_HOLIDAYS = {
   '2026-04-03': '耶穌受難節', '2026-04-04': '清明節', '2026-04-06': '復活節星期一', '2026-05-01': '勞動節',
   '2026-05-24': '佛誕', '2026-06-19': '端午節', '2026-07-01': '特區成立紀念日', '2026-09-26': '中秋節翌日',
   '2026-10-01': '國慶日', '2026-10-19': '重陽節', '2026-12-25': '聖誕節', '2026-12-26': '聖誕節後第一個周日',
+  
+  // 2027
+  '2027-01-01': '元旦', '2027-02-06': '農曆年初一', '2027-02-08': '農曆年初三', '2027-02-09': '農曆年初四',
+  '2027-03-26': '耶穌受難節', '2027-03-27': '耶穌受難節翌日', '2027-04-05': '清明節', '2027-03-29': '復活節星期一', '2027-05-01': '勞動節',
+  '2027-05-13': '佛誕', '2027-06-09': '端午節', '2027-07-01': '特區成立紀念日', '2027-09-16': '中秋節翌日',
+  '2027-10-01': '國慶日', '2027-10-08': '重陽節', '2027-12-25': '聖誕節', '2027-12-27': '聖誕節後第一個周日',
 };
 
 const DEFAULT_THEMES = [
@@ -133,6 +139,7 @@ export default function App() {
   const [showBatchPrintModal, setShowBatchPrintModal] = useState(false);
   const [batchPrintStart, setBatchPrintStart] = useState('2026-01');
   const [batchPrintEnd, setBatchPrintEnd] = useState('2026-12');
+  const [borderSize, setBorderSize] = useState(24);
   const [isBatchPrinting, setIsBatchPrinting] = useState(false);
   
   const { getLunarData, lunarLoaded } = useLunar();
@@ -483,7 +490,7 @@ export default function App() {
         <div className={`bg-white shadow-2xl print:shadow-none relative overflow-hidden flex ${containerClass}`} style={{ width: '210mm', height: '148mm', flexShrink: 0 }}>
           
           {/* Image Area */}
-          <div className={`${imageWidthClass} bg-slate-50 relative overflow-hidden group border-slate-100`} style={imageStyle}>
+          <div className={`${imageWidthClass} bg-slate-50 relative overflow-hidden group border-slate-100`} style={{...imageStyle, border: '24px solid rgba(255, 255, 255, 0.5)'}}>
             {/* The Image Itself - Wrapper for ref */}
             <div 
               ref={imageContainerRef}
@@ -536,7 +543,7 @@ export default function App() {
           </div>
 
           {/* Calendar Area */}
-          <div className={`${calendarWidthClass} ${calendarPadding} flex flex-col justify-between bg-white relative`} style={calendarStyle}>
+          <div className={`${calendarWidthClass} ${calendarPadding} flex flex-col justify-between bg-white relative`} style={{...calendarStyle, border: '24px solid rgba(255, 255, 255, 0.5)'}}>
             <div className="flex justify-between items-end mb-2 border-b-2 border-indigo-500 pb-2">
               <div className="flex items-baseline gap-3">
                 <h2 className="text-4xl font-bold text-slate-800 leading-none tracking-tight">{month + 1}<span className="text-lg ml-1 text-slate-500 font-medium">月</span></h2>
@@ -610,6 +617,10 @@ export default function App() {
                  <label className="block text-sm font-medium mb-1">結束日期 (YYYY-MM)</label>
                  <input type="month" value={batchPrintEnd} onChange={(e) => setBatchPrintEnd(e.target.value)} className="w-full border border-slate-200 rounded p-2"/>
                </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1">邊框大小 (px)</label>
+                 <input type="number" value={borderSize} onChange={(e) => setBorderSize(Math.max(0, parseInt(e.target.value) || 0))} className="w-full border border-slate-200 rounded p-2"/>
+               </div>
                <p className="text-xs text-slate-500">每頁會列印 2 個月份</p>
              </div>
              <div className="flex justify-end gap-2 mt-6"><button onClick={() => setShowBatchPrintModal(false)} className="px-4 py-2 text-sm text-slate-500">取消</button><button onClick={() => { setShowBatchPrintModal(false); setIsBatchPrinting(true); setTimeout(() => window.print(), 500); }} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded">列印</button></div>
@@ -651,7 +662,7 @@ export default function App() {
                 <div key={idx} className="batch-calendar-page" style={{ pageBreakAfter: idx % 2 === 1 ? 'always' : 'auto', pageBreakInside: 'avoid', marginBottom: idx % 2 === 0 ? '0' : '0', overflow: 'hidden' }}>
                   <div className="bg-white relative overflow-hidden flex flex-row" style={{ width: '210mm', height: '148mm', margin: '0 auto', overflow: 'hidden' }}>
                     {/* Image Area */}
-                    <div className="border-r bg-slate-50 relative border-slate-100" style={{ flex: '0 0 40%', overflow: 'hidden', height: '148mm' }}>
+                    <div className="border-r bg-slate-50 relative border-slate-100" style={{ flex: '0 0 40%', overflow: 'hidden', height: '148mm', border: `${borderSize}px solid rgba(255, 255, 255, 0.5)` }}>
                       <div className="w-full h-full relative" style={{ overflow: 'hidden' }}>
                         <img 
                           src={calImage} 
@@ -684,7 +695,7 @@ export default function App() {
                     </div>
 
                     {/* Calendar Area */}
-                    <div className="p-4 flex flex-col justify-between bg-white relative" style={{ flex: '0 0 60%' }}>
+                    <div className="p-4 flex flex-col justify-between bg-white relative" style={{ flex: '0 0 60%', border: `${borderSize}px solid rgba(255, 255, 255, 0.5)` }}>
                       <div className="flex justify-between items-end mb-2 border-b-2 border-indigo-500 pb-2">
                         <div className="flex items-baseline gap-3">
                           <h2 className="text-4xl font-bold text-slate-800 leading-none tracking-tight">{cal.month + 1}<span className="text-lg ml-1 text-slate-500 font-medium">月</span></h2>
